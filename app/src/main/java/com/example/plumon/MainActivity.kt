@@ -13,7 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
-import androidx.lifecycle.viewmodel.compose.viewModel // Necesario para acceder al VM en AppNavigation
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 import com.example.plumon.model.Usuario
 import com.example.plumon.ui.screen.* // Importa todas tus pantallas
@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-                ) {
+                )
+                {
                     AppNavigation()
                 }
             }
@@ -52,25 +53,17 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    // Instancia del AuthViewModel para verificar el rol después del login
-    val authViewModel: AuthViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
 
-        // MainActivity.kt - Dentro de la función AppNavigation
-
         composable(Screen.Login.route) {
-            // 1. Obtener el AuthViewModel
-            val authViewModel: AuthViewModel = viewModel()
-
             LoginScreen(onLoginSuccess = { usuario: Usuario ->
 
-                // 2. Lógica para REDIRIGIR según el rol:
-                val destinationRoute = if (authViewModel.userRole.value == "Recepcionista") {
-                    // ➡️ REDIRECCIÓN CORRECTA: Dashboard (para Recepcionista)
+                // Lógica corregida para REDIRIGIR según el rol
+                // Usamos el rol del objeto 'usuario' que acabamos de recibir, que es 100% seguro.
+                val destinationRoute = if (usuario.rol == "Recepcionista") {
                     Screen.Dashboard.route
                 } else {
-                    // ➡️ Redirige al Huésped a su pantalla de escaneo
                     Screen.GuestScan.createRoute(usuario.usuario)
                 }
 
@@ -119,15 +112,10 @@ fun AppNavigation() {
                 navArgument("reservaId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-
-            // 1. EXTRACCIÓN: Correctamente recuperas el argumento
             val reservaId = backStackEntry.arguments?.getString("reservaId") ?: ""
-
-            // 2. PASAR EL ARGUMENTO: Ahora debes pasar la variable a la función Composable
             GuestScanScreen(
-                reservaId = reservaId, // <-- ¡AÑADE ESTA LÍNEA!
-                onScanCompleted = { scannedCode ->
-                    // Lógica de manejo de escaneo
+                reservaId = reservaId,
+                onScanCompleted = {
                     navController.popBackStack()
                 }
             )

@@ -1,13 +1,47 @@
 package com.example.plumon.viewmodel
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.plumon.model.Reserva
 import com.example.plumon.repository.HotelRepository
+import com.example.plumon.repository.IHotelRepository
+import kotlinx.coroutines.launch
 import org.threeten.bp.LocalDate
 import org.threeten.bp.format.DateTimeParseException
 import androidx.compose.runtime.snapshots.SnapshotStateList
 
-class ReservationsViewModel(private val repository: HotelRepository = HotelRepository()) : ViewModel() {
+// Estado para la UI
+sealed interface ReservationsUiState {
+    object Loading : ReservationsUiState
+    data class Success(val reservas: SnapshotStateList<Reserva>) : ReservationsUiState
+    data class Error(val message: String) : ReservationsUiState
+}
+
+class ReservationsViewModel(private val repository: IHotelRepository = HotelRepository()) : ViewModel() {
+
+    var uiState: ReservationsUiState by mutableStateOf(ReservationsUiState.Loading)
+        private set
+
+    init {
+        // Carga las reservas tan pronto como el ViewModel se crea
+        loadReservas()
+    }
+
+    fun loadReservas() {
+        // Inicia el estado de carga
+        uiState = ReservationsUiState.Loading
+        viewModelScope.launch {
+            try {
+                repository.refreshReservas() // Llama a la función que busca en la API
+                uiState = ReservationsUiState.Success(repository.getReservas())
+            } catch (e: Exception) {
+                uiState = ReservationsUiState.Error("Error al cargar las reservas: ${e.message}")
+            }
+        }
+    }
 
     val reservas: SnapshotStateList<Reserva>
         get() = repository.getReservas()
